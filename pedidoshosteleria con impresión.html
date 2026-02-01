@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HostelPro - Gestión de Pedidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap">
+    <style id="dynamic-styles">
+        :root {
+            --primary: #f97316;
+            --text-main: #1e293b;
+        }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            -webkit-tap-highlight-color: transparent; 
+            color: var(--text-main);
+            overflow-x: hidden;
+        }
+        .text-primary { color: var(--primary); }
+        .bg-primary { background-color: var(--primary); }
+        .border-primary { border-color: var(--primary); }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .modal-blur { backdrop-filter: blur(12px); }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .bg-pattern { background-color: #f8fafc; background-image: radial-gradient(#e2e8f0 0.5px, transparent 0.5px); background-size: 10px 10px; }
+        
+        .product-img-container {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            position: relative;
+        }
+        @media (min-width: 640px) {
+            .product-img-container { height: 240px; }
+        }
+        .product-img-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+        .admin-tab-btn.active { border-color: var(--primary); color: var(--primary); border-width: 2px; }
+
+        .custom-modal-content {
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .custom-modal-body {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        /* Scrollbar visible para categorías */
+        #admin-cat-list-box {
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e1 #f8fafc;
+        }
+        #admin-cat-list-box::-webkit-scrollbar {
+            width: 5px;
+        }
+        #admin-cat-list-box::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="bg-pattern">
+
+    <div id="app" class="min-h-screen pb-20">
+        <!-- HEADER -->
+        <header class="bg-white/80 backdrop-blur-md sticky top-0 z-40 border-b border-slate-200">
+            <div class="max-w-5xl mx-auto px-4 py-3 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center overflow-hidden bg-slate-100 border border-slate-200 shadow-sm" id="brand-logo-container">
+                        <span id="logo-placeholder" class="text-xl sm:text-2xl">🍽️</span>
+                        <img id="brand-logo-img" class="hidden w-full h-full object-cover">
+                    </div>
+                    <div>
+                        <h1 id="brand-name" class="font-bold text-slate-900 leading-none mb-1 text-sm sm:text-base">Cargando...</h1>
+                        <div id="status-badge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-1 sm:gap-2">
+                    <button id="admin-access-btn" onclick="openAdminAuth()" class="p-2 text-slate-400 hover:text-primary transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button onclick="toggleView('cart')" class="relative p-2 bg-slate-900 text-white rounded-xl shadow-md">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                        <span id="cart-counter" class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full font-bold border-2 border-white">0</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- VISTA CLIENTE: MENÚ -->
+        <main id="view-menu" class="max-w-5xl mx-auto p-4 animate-in fade-in duration-500">
+            <div id="category-bar" class="flex gap-2 overflow-x-auto no-scrollbar pb-6 sticky top-[65px] sm:top-[72px] bg-transparent z-30"></div>
+            <div id="product-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"></div>
+        </main>
+
+        <!-- VISTA CLIENTE: CARRITO -->
+        <section id="view-cart" class="hidden max-w-2xl mx-auto p-4 animate-in slide-in-from-right duration-300">
+            <div class="flex items-center gap-4 mb-6">
+                <button onclick="toggleView('menu')" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-primary transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <h2 class="text-2xl font-bold text-slate-900">Tu Pedido</h2>
+            </div>
+            <div id="cart-list" class="space-y-3 mb-6"></div>
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-5">
+                <div>
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Método de entrega</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setDelivery('delivery')" id="btn-delivery" class="py-2.5 border-2 rounded-2xl font-bold text-sm transition-all">🏠 Domicilio</button>
+                        <button onclick="setDelivery('pickup')" id="btn-pickup" class="py-2.5 border-2 rounded-2xl font-bold text-sm transition-all">🥡 Recoger</button>
+                    </div>
+                </div>
+
+                <div id="payment-method-section">
+                    <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-3">Método de pago</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button onclick="setPayment('cash')" id="btn-pay-cash" class="py-3 border-2 rounded-2xl font-bold transition-all">💵 Efectivo</button>
+                        <button onclick="setPayment('card')" id="btn-pay-card" class="py-3 border-2 rounded-2xl font-bold transition-all">💳 Tarjeta</button>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <input type="text" id="order-name" placeholder="Tu nombre" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-orange-200">
+                    <input type="tel" id="order-phone" placeholder="Tu Teléfono de contacto" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-orange-200">
+                    <input type="text" id="order-address" placeholder="Dirección de entrega" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm focus:ring-2 focus:ring-orange-200">
+                    <textarea id="order-notes" placeholder="Notas adicionales (alergias, etc)..." class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm h-20 resize-none"></textarea>
+                </div>
+                <div class="border-t pt-4 flex justify-between items-end mb-4">
+                    <span class="text-slate-400 font-medium text-sm">Total</span>
+                    <span id="cart-total" class="text-3xl font-bold text-slate-900 leading-none">0.00</span>
+                </div>
+                <button onclick="checkout()" class="w-full bg-green-500 text-white py-4 rounded-2xl font-bold text-lg shadow-lg hover:bg-green-600 transition-all flex items-center justify-center gap-3 active:scale-95">
+                    Confirmar Pedido
+                </button>
+            </div>
+        </section>
+
+        <!-- PANEL DE ADMINISTRACIÓN -->
+        <section id="view-admin" class="hidden max-w-7xl mx-auto p-4 animate-in fade-in duration-300">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                <h2 class="text-2xl font-bold">Gestión de Tienda</h2>
+                <div class="flex gap-1 overflow-x-auto no-scrollbar w-full md:w-auto pb-2 md:pb-0">
+                    <button onclick="switchAdminTab('adjust')" class="admin-tab-btn active flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-white shadow-sm border border-slate-200 whitespace-nowrap">Ajustes</button>
+                    <button onclick="switchAdminTab('orders')" class="admin-tab-btn relative flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-white shadow-sm border border-slate-200 whitespace-nowrap flex items-center justify-center gap-2">
+                        Pedidos
+                        <span id="admin-pending-badge" class="hidden bg-red-500 text-white text-[8px] min-w-[16px] h-[16px] px-1 flex items-center justify-center rounded-full font-bold border border-white animate-pulse">0</span>
+                    </button>
+                    <button onclick="switchAdminTab('products')" class="admin-tab-btn flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-white shadow-sm border border-slate-200 whitespace-nowrap">Inventario</button>
+                    <button onclick="switchAdminTab('delivery')" class="admin-tab-btn flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-white shadow-sm border border-slate-200 whitespace-nowrap">Reparto</button>
+                    <button onclick="switchAdminTab('data')" class="admin-tab-btn flex-1 md:flex-none px-4 py-2 rounded-xl text-xs font-bold bg-white shadow-sm border border-slate-200 whitespace-nowrap">💾 Datos</button>
+                    <button onclick="logoutAdmin()" class="flex-1 md:flex-none px-4 py-2 bg-slate-100 text-slate-500 rounded-xl font-bold text-xs hover:bg-slate-200 whitespace-nowrap">Salir</button>
+                </div>
+            </div>
+
+            <!-- TAB: AJUSTES -->
+            <div id="admin-tab-adjust" class="admin-tab-content grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div class="space-y-6">
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="font-bold text-sm mb-4 border-b pb-2 text-primary uppercase tracking-wider">Estética</h3>
+                        <div class="space-y-3 text-[11px]">
+                            <div>
+                                <label class="font-bold text-slate-400 block mb-1">Logo del Negocio</label>
+                                <input type="file" id="cfg-logo-input" accept="image/*" class="w-full p-2 bg-slate-50 border rounded-lg">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="font-bold text-slate-400 block mb-1">Color Principal</label>
+                                    <input type="color" id="cfg-color-primary" class="w-full h-8 rounded-lg cursor-pointer">
+                                </div>
+                                <div>
+                                    <label class="font-bold text-slate-400 block mb-1">Color de Texto</label>
+                                    <input type="color" id="cfg-color-text" class="w-full h-8 rounded-lg cursor-pointer">
+                                </div>
+                            </div>
+                            <button onclick="saveGlobalSettings()" class="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold uppercase mt-2 active:scale-95">Guardar Estética</button>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 text-center h-fit">
+                        <h3 class="font-bold text-sm mb-4 border-b pb-2 uppercase tracking-wider text-slate-700">Categorías</h3>
+                        <div class="flex gap-2 mb-4">
+                            <input type="text" id="cfg-new-category" placeholder="Ej: Postres" class="flex-1 p-2 bg-slate-50 border rounded-lg text-xs outline-none">
+                            <button onclick="addCategory()" class="bg-primary text-white px-3 rounded-lg font-bold">+</button>
+                        </div>
+                        <div id="admin-cat-list-box" class="space-y-1 max-h-64 overflow-y-auto pr-1"></div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 h-fit">
+                        <h3 class="font-bold text-sm mb-4 border-b pb-2 uppercase tracking-wider text-slate-700">Información</h3>
+                        <div class="space-y-3 text-[11px]">
+                            <div>
+                                <label class="font-bold text-slate-400 block mb-1">Nombre Comercial</label>
+                                <input type="text" id="cfg-name" class="w-full p-2 bg-slate-50 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-400 block mb-1">WhatsApp Pedidos (con prefijo)</label>
+                                <input type="text" id="cfg-phone" placeholder="Ej: 34000000000" class="w-full p-2 bg-slate-50 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-400 block mb-1">Texto Botón Comprar</label>
+                                <input type="text" id="cfg-btn-text" placeholder="Ej: Pedir ahora" class="w-full p-2 bg-slate-50 border rounded-lg">
+                            </div>
+                            <div>
+                                <label class="font-bold text-slate-400 block mb-1">Moneda</label>
+                                <select id="cfg-currency" class="w-full p-2 bg-slate-50 border rounded-lg"></select>
+                            </div>
+                            <button onclick="saveGlobalSettings()" class="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold uppercase mt-2 active:scale-95">Actualizar Datos</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 h-fit">
+                        <h3 class="font-bold text-sm mb-4 border-b pb-2 uppercase tracking-wider text-slate-700">Horarios</h3>
+                        <div id="hours-config" class="space-y-2"></div>
+                        <button onclick="saveHours()" class="w-full bg-slate-100 text-slate-900 py-2.5 rounded-xl font-bold uppercase mt-4 text-[10px] active:scale-95">Actualizar Horarios</button>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 text-center h-fit">
+                        <h3 class="font-bold text-sm mb-4 border-b pb-2 uppercase tracking-wider text-slate-700">Difusión</h3>
+                        <div id="qrcode" class="mb-4 inline-block"></div>
+                        <input type="text" id="share-url" readonly class="w-full text-[9px] p-2 bg-slate-50 border rounded-lg text-center font-mono overflow-hidden mb-2">
+                        <button onclick="copyShareLink()" class="w-full bg-primary text-white py-2 rounded-lg text-[10px] font-bold uppercase active:scale-95 mb-2">Copiar Enlace</button>
+                        <button onclick="downloadQR()" class="w-full bg-slate-50 py-2 rounded-lg text-[10px] font-bold uppercase border active:scale-95">Descargar QR</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: PEDIDOS -->
+            <div id="admin-tab-orders" class="admin-tab-content hidden animate-in fade-in">
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div class="p-5 border-b flex justify-between items-center">
+                        <div class="flex items-center gap-3">
+                            <h3 class="font-bold text-lg">Registro de Pedidos</h3>
+                            <button onclick="playOrderSound()" class="p-2 text-primary hover:bg-orange-50 rounded-lg transition-colors" title="Probar sonido">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                            </button>
+                        </div>
+                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest" id="order-count-badge">0 Pedidos</span>
+                    </div>
+                    <div id="admin-orders-list" class="divide-y overflow-y-auto max-h-[70vh] no-scrollbar">
+                        <div class="p-20 text-center text-slate-400 opacity-50">No hay pedidos registrados todavía.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: REPARTIDORES -->
+            <div id="admin-tab-delivery" class="admin-tab-content hidden animate-in fade-in grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-1 space-y-6">
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="font-bold text-sm mb-4 border-b pb-2 uppercase tracking-wider text-slate-700">Grupo WhatsApp</h3>
+                        <div class="space-y-3 text-[11px]">
+                            <label class="font-bold text-slate-400 block mb-1">Link/ID Grupo de Reparto</label>
+                            <input type="text" id="cfg-delivery-group" placeholder="Número o Link" class="w-full p-2 bg-slate-50 border rounded-lg">
+                            <button onclick="saveDeliveryGroup()" class="w-full bg-slate-900 text-white py-2.5 rounded-xl font-bold uppercase active:scale-95">Guardar Grupo</button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 id="delivery-form-title" class="font-bold text-sm mb-4 border-b pb-2 uppercase tracking-wider text-slate-700">Nuevo Repartidor</h3>
+                        <div class="space-y-3 text-[11px]">
+                            <input type="hidden" id="edit-delivery-id">
+                            <input type="text" id="delivery-name" placeholder="Nombre" class="w-full p-2 bg-slate-50 border rounded-lg">
+                            <input type="text" id="delivery-phone" placeholder="Teléfono con prefijo" class="w-full p-2 bg-slate-50 border rounded-lg">
+                            <div class="flex gap-2">
+                                <button id="delivery-save-btn" onclick="addDeliveryPerson()" class="flex-1 bg-primary text-white py-2.5 rounded-xl font-bold uppercase active:scale-95">Añadir</button>
+                                <button id="delivery-reset-btn" onclick="resetDeliveryForm()" class="hidden px-4 bg-slate-100 text-slate-400 rounded-xl font-bold">✕</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden h-fit">
+                        <div class="p-5 border-b uppercase tracking-widest text-[10px] font-bold text-slate-400 italic">Repartidores registrados</div>
+                        <div id="delivery-people-list" class="divide-y max-h-[60vh] overflow-y-auto no-scrollbar"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: DATOS / BACKUP -->
+            <div id="admin-tab-data" class="admin-tab-content hidden animate-in fade-in space-y-6">
+                <!-- SECCIÓN CAMBIAR CONTRASEÑA -->
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6 max-w-2xl mx-auto">
+                    <h3 class="font-bold text-lg mb-4 text-slate-700 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Seguridad
+                    </h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Contraseña Actual</label>
+                            <input type="password" id="change-pass-old" class="w-full p-2.5 bg-slate-50 border rounded-xl outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Nueva Contraseña (min 6)</label>
+                            <input type="password" id="change-pass-new1" class="w-full p-2.5 bg-slate-50 border rounded-xl outline-none text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold uppercase text-slate-400 block mb-1">Repetir Nueva</label>
+                            <input type="password" id="change-pass-new2" class="w-full p-2.5 bg-slate-50 border rounded-xl outline-none text-sm">
+                        </div>
+                        <button onclick="changeAdminPassword()" class="sm:col-span-2 bg-slate-900 text-white py-3 rounded-2xl font-bold uppercase text-xs active:scale-95 transition-transform">Actualizar Contraseña</button>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 max-w-2xl mx-auto text-center">
+                    <div class="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-400">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </div>
+                    <h3 class="text-2xl font-bold mb-2">Copias de Seguridad</h3>
+                    <p class="text-slate-500 text-sm mb-8">Descarga o sube tus datos para no perder tu configuración.</p>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+                        <button onclick="exportStoreData()" class="p-4 border-2 border-slate-100 rounded-3xl hover:border-primary/20 transition-all group">
+                            <div class="text-primary mb-2 transition-transform group-hover:-translate-y-1">⬇️</div>
+                            <div class="font-bold text-sm">Exportar JSON</div>
+                            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Descargar Backup</div>
+                        </button>
+                        <div class="p-4 border-2 border-slate-100 rounded-3xl hover:border-primary/20 transition-all relative overflow-hidden group">
+                            <div class="text-primary mb-2 transition-transform group-hover:-translate-y-1">⬆️</div>
+                            <div class="font-bold text-sm">Importar JSON</div>
+                            <div class="text-[10px] text-slate-400 uppercase font-bold tracking-widest mt-1">Restaurar Backup</div>
+                            <input type="file" id="import-data-input" accept=".json" class="absolute inset-0 opacity-0 cursor-pointer">
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-8">
+                        <button onclick="resetStoreData()" class="px-8 py-3 bg-red-50 text-red-500 rounded-2xl font-bold text-sm hover:bg-red-500 hover:text-white transition-all active:scale-95">
+                            🗑️ Borrar Todos los Datos
+                        </button>
+                        <p class="text-[10px] text-slate-400 mt-3 font-bold uppercase italic">Esta acción eliminará todos los productos, pedidos y ajustes permanentemente.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: INVENTARIO -->
+            <div id="admin-tab-products" class="admin-tab-content hidden animate-in fade-in grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
+                        <h3 class="text-lg font-bold mb-6 flex items-center gap-2" id="product-form-title">
+                            📦 Producto
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="product-form">
+                            <input type="hidden" id="edit-product-id">
+                            <div class="md:col-span-2">
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Nombre</label>
+                                <input type="text" id="p-name" class="w-full p-2.5 bg-slate-50 border rounded-xl outline-none text-sm focus:ring-2 focus:ring-orange-100">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Categoría</label>
+                                <select id="p-category" class="w-full p-2 bg-slate-50 border rounded-xl text-sm outline-none"></select>
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Fotos</label>
+                                <input type="file" id="p-image-input" multiple accept="image/*" class="w-full text-[10px] p-2 bg-slate-50 border rounded-xl">
+                            </div>
+                            <div id="p-image-previews" class="md:col-span-2 flex gap-2 overflow-x-auto py-2"></div>
+                            <div class="md:col-span-2">
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Descripción</label>
+                                <textarea id="p-desc" class="w-full p-2.5 bg-slate-50 border rounded-xl h-20 outline-none resize-none text-sm focus:ring-2 focus:ring-orange-100"></textarea>
+                            </div>
+
+                            <div class="md:col-span-2 bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-300">
+                                <h4 class="font-bold text-xs mb-3 text-slate-500 uppercase tracking-widest">Variantes de precio</h4>
+                                <div id="variants-list" class="space-y-2 mb-3"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="v-name" placeholder="Normal" class="flex-1 p-2 bg-white border rounded-xl text-xs outline-none">
+                                    <input type="number" id="v-price" placeholder="€" class="w-20 p-2 bg-white border rounded-xl text-xs outline-none">
+                                    <button onclick="addVariantUI()" class="px-4 bg-slate-900 text-white rounded-xl font-bold">+</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-blue-50/50 p-4 rounded-2xl border border-blue-100">
+                                <h4 class="font-bold text-xs mb-3 text-blue-600 uppercase tracking-widest">Ingredientes Extra</h4>
+                                <div id="extras-list" class="space-y-2 mb-3"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="e-name" placeholder="Extra" class="flex-1 p-1.5 bg-white border rounded-lg text-[10px] outline-none">
+                                    <input type="number" id="e-price" placeholder="€" class="w-12 p-1.5 bg-white border rounded-lg text-[10px] outline-none">
+                                    <button onclick="addExtraUI()" class="px-3 bg-blue-600 text-white rounded-lg font-bold">+</button>
+                                </div>
+                            </div>
+
+                            <div class="bg-red-50/50 p-4 rounded-2xl border border-red-100">
+                                <h4 class="font-bold text-xs mb-3 text-red-600 uppercase tracking-widest">Quitar (-)</h4>
+                                <div id="removals-list" class="space-y-2 mb-3"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="r-name" placeholder="Sin..." class="flex-1 p-1.5 bg-white border rounded-lg text-[10px] outline-none">
+                                    <button onclick="addRemovalUI()" class="px-3 bg-red-600 text-white rounded-lg font-bold">+</button>
+                                </div>
+                            </div>
+
+                            <div class="md:col-span-2 flex gap-3 pt-4 border-t">
+                                <button onclick="saveProduct()" class="flex-1 bg-green-500 text-white py-3 rounded-2xl font-bold uppercase text-xs active:scale-95 transition-transform">Guardar</button>
+                                <button onclick="resetProductForm()" class="px-6 bg-slate-200 text-slate-600 rounded-2xl font-bold uppercase text-[10px]">Limpiar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-6">
+                    <h3 class="font-bold text-lg px-2">Inventario</h3>
+                    <div id="admin-inventory" class="space-y-3 max-h-[800px] overflow-y-auto pr-2 no-scrollbar"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MODAL DESPACHO REPARTIDOR -->
+        <div id="delivery-modal" class="fixed inset-0 bg-slate-900/70 z-[70] hidden modal-blur p-4 items-center justify-center">
+            <div class="bg-white w-full max-w-sm rounded-[32px] p-6 sm:p-8 shadow-2xl animate-in zoom-in">
+                <div class="text-center mb-6">
+                    <h3 class="text-xl font-bold text-slate-900">Despachar Pedido</h3>
+                    <p class="text-slate-400 text-xs mt-1">Organiza el tiempo de entrega</p>
+                </div>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2">Preparación (minutos)</label>
+                        <select id="delivery-prep-time" class="w-full p-3 bg-slate-50 border rounded-2xl font-bold text-center appearance-none text-sm">
+                            <option value="10">10 Minutos</option>
+                            <option value="15">15 Minutos</option>
+                            <option value="20">20 Minutos</option>
+                            <option value="30" selected>30 Minutos</option>
+                            <option value="45">45 Minutos</option>
+                            <option value="60">1 Hora</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold uppercase text-slate-400 mb-2">Asignar Repartidor</label>
+                        <select id="delivery-target-select" class="w-full p-3 bg-slate-50 border rounded-2xl font-bold text-sm appearance-none">
+                            <option value="group">📢 Grupo de Reparto</option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 pt-4">
+                        <button onclick="closeDeliveryModal()" class="py-2.5 bg-slate-100 text-slate-500 rounded-xl font-bold uppercase text-[9px]">Cancelar</button>
+                        <button id="dispatch-confirm-btn" class="py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg uppercase text-[9px] active:scale-95">WhatsApp</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL PRODUCTO CLIENTE -->
+        <div id="product-modal" class="fixed inset-0 bg-slate-900/60 z-50 hidden modal-blur p-4 items-center justify-center">
+            <div class="bg-white w-full max-w-xl rounded-[40px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300 custom-modal-content">
+                <div class="product-img-container flex-shrink-0">
+                    <button onclick="closeModal()" class="absolute top-4 right-4 z-10 bg-white/90 p-2 rounded-2xl shadow-sm"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                    <div id="modal-images" class="h-full flex overflow-x-auto snap-x no-scrollbar"></div>
+                </div>
+                <div class="p-6 sm:p-8 custom-modal-body">
+                    <h3 id="modal-title" class="text-2xl sm:text-3xl font-bold mb-2 text-slate-900"></h3>
+                    <p id="modal-desc" class="text-slate-500 text-xs sm:text-sm mb-6"></p>
+                    <div class="space-y-6">
+                        <div id="modal-sizes-container">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-3 tracking-widest">Seleccionar Tamaño</label>
+                            <div class="grid grid-cols-2 gap-2" id="modal-size-options"></div>
+                        </div>
+                        <div id="modal-extras-container" class="hidden">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-3 tracking-widest">Extras</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="modal-extra-options"></div>
+                        </div>
+                        <div id="modal-removals-container" class="hidden">
+                            <label class="block text-[10px] font-bold uppercase text-slate-400 mb-3 tracking-widest">¿Quitar algo?</label>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2" id="modal-removal-options"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-6 sm:p-8 bg-slate-50 border-t flex flex-col sm:flex-row items-center justify-between gap-4 flex-shrink-0">
+                    <div class="flex items-center bg-white border rounded-2xl overflow-hidden p-0.5 shadow-sm">
+                        <button onclick="modQty(-1)" class="w-10 h-10 flex items-center justify-center font-bold text-lg hover:bg-slate-50 transition-colors">−</button>
+                        <span id="modal-qty" class="w-10 text-center font-bold text-base">1</span>
+                        <button onclick="modQty(1)" class="w-10 h-10 flex items-center justify-center font-bold text-lg hover:bg-slate-50 transition-colors">+</button>
+                    </div>
+                    <button id="modal-add-btn" class="w-full sm:w-auto flex-1 bg-primary text-white py-3.5 px-6 rounded-2xl font-bold text-base shadow-xl shadow-orange-100 flex justify-between items-center active:scale-95 transition-transform">
+                        <span>Añadir</span>
+                        <span id="modal-price-total">0.00</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AUTH MODAL -->
+        <div id="admin-auth-modal" class="fixed inset-0 bg-slate-900/70 z-[60] hidden modal-blur p-4 items-center justify-center">
+            <div id="auth-login-view" class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl hidden animate-in zoom-in">
+                <h3 class="text-xl font-bold text-center mb-6 text-slate-900">Acceso Admin</h3>
+                <input type="password" id="admin-auth-pass" placeholder="Contraseña" class="w-full p-3 bg-slate-50 border rounded-2xl text-center text-xl font-bold mb-4 outline-none focus:ring-2 focus:ring-primary/20">
+                <div class="grid grid-cols-2 gap-3">
+                    <button onclick="closeAdminAuth()" class="py-2.5 bg-slate-100 text-slate-500 rounded-xl font-bold uppercase text-[9px]">Cerrar</button>
+                    <button onclick="checkAdminPassword()" class="py-2.5 bg-primary text-white rounded-xl font-bold shadow-lg uppercase text-[9px] active:scale-95">Entrar</button>
+                </div>
+            </div>
+            <div id="auth-setup-view" class="bg-white w-full max-w-sm rounded-[32px] p-8 shadow-2xl hidden text-center animate-in zoom-in">
+                <h3 class="text-xl font-bold mb-2 text-slate-900 leading-tight">Nueva Contraseña</h3>
+                <p class="text-[10px] text-slate-400 mb-6 font-bold uppercase italic">Mínimo 6 caracteres</p>
+                <input type="password" id="admin-setup-pass1" placeholder="Contraseña" class="w-full p-3 bg-slate-50 border rounded-2xl mb-2 font-bold outline-none text-center">
+                <input type="password" id="admin-setup-pass2" placeholder="Repetir" class="w-full p-3 bg-slate-50 border rounded-2xl mb-4 font-bold outline-none text-center">
+                <button onclick="setupAdminPassword()" class="w-full py-3.5 bg-primary text-white rounded-2xl font-bold shadow-lg mb-2 uppercase text-[10px] active:scale-95">Configurar</button>
+            </div>
+        </div>
+
+        <!-- MODAL ÉXITO PEDIDO -->
+        <div id="success-modal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden modal-blur p-4 items-center justify-center">
+            <div class="bg-white w-full max-w-xs rounded-[40px] p-8 text-center shadow-2xl animate-in zoom-in">
+                <div class="w-20 h-20 bg-green-100 text-green-500 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl">✓</div>
+                <h3 class="text-xl font-bold mb-2">¡Pedido Recibido!</h3>
+                <p class="text-slate-500 text-sm mb-6">Hemos recibido tu pedido correctamente. ¡Gracias por confiar en nosotros!</p>
+                <button onclick="closeSuccessModal()" class="w-full py-3 bg-slate-900 text-white rounded-2xl font-bold uppercase text-xs active:scale-95">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- ESTADO ---
+        let state = {
+            settings: {
+                name: "HostelPro Gastro",
+                phone: "34000000000",
+                logo: null,
+                currency: { symbol: "€", code: "EUR" },
+                deliveryType: 'delivery',
+                paymentMethod: 'cash',
+                deliveryGroup: null,
+                passwordHash: null,
+                colorPrimary: '#f97316',
+                colorText: '#1e293b',
+                addToCartText: '🛒 Añadir al Carrito'
+            },
+            hours: [
+                { day: "Lunes", open: "09:00", close: "23:00", closed: false },
+                { day: "Martes", open: "09:00", close: "23:00", closed: false },
+                { day: "Miércoles", open: "09:00", close: "23:00", closed: false },
+                { day: "Jueves", open: "09:00", close: "23:00", closed: false },
+                { day: "Viernes", open: "09:00", close: "23:00", closed: false },
+                { day: "Sábado", open: "10:00", close: "23:30", closed: false },
+                { day: "Domingo", open: "10:00", close: "23:30", closed: false }
+            ],
+            categories: ["🔥 Destacados", "🍔 Hamburguesas", "🥗 Ensaladas", "🥤 Bebidas"],
+            products: [], cart: [], orders: [], deliveryPeople: [], activeCategory: null, isOpen: false
+        };
+
+        let orderAlertInterval = null;
+
+        const LATAM_CURRENCIES = [
+            { symbol: "€", code: "EUR" }, { symbol: "$", code: "MXN" }, { symbol: "$", code: "COP" },
+            { symbol: "$", code: "ARS" }, { symbol: "$", code: "CLP" }, { symbol: "S/.", code: "PEN" },
+            { symbol: "Q", code: "GTQ" }, { symbol: "L", code: "HNL" }, { symbol: "C$", code: "NIO" },
+            { symbol: "₡", code: "CRC" }, { symbol: "₲", code: "PYG" }, { symbol: "Bs.", code: "BOB" },
+            { symbol: "$U", code: "UYU" }, { symbol: "RD$", code: "DOP" }, { symbol: "B/.", code: "PAB" },
+            { symbol: "Bs.S", code: "VEF" }, { symbol: "$", code: "USD" }
+        ];
+
+        let tempVariants = [], tempExtras = [], tempRemovals = [], tempImages = [];
+        let currentModalProduct = null, currentModalQty = 1;
+        let currentDispatchOrder = null;
+
+        async function hashPassword(password) {
+            const msgBuffer = new TextEncoder().encode(password);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // --- SISTEMA DE SONIDO LARGO Y FUERTE (GLOVO STYLE) ---
+        function playOrderSound() {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                for(let i = 0; i < 3; i++) {
+                    const offset = i * 0.8;
+                    const notes = [
+                        { freq: 880.00, time: 0 + offset, dur: 0.2 },
+                        { freq: 880.00, time: 0.25 + offset, dur: 0.2 },
+                        { freq: 1174.66, time: 0.5 + offset, dur: 0.4 }
+                    ];
+                    notes.forEach(note => {
+                        const osc = audioCtx.createOscillator();
+                        const gain = audioCtx.createGain();
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(note.freq, audioCtx.currentTime + note.time);
+                        gain.gain.setValueAtTime(0, audioCtx.currentTime + note.time);
+                        gain.gain.linearRampToValueAtTime(0.4, audioCtx.currentTime + note.time + 0.05);
+                        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + note.time + note.dur);
+                        osc.connect(gain);
+                        gain.connect(audioCtx.destination);
+                        osc.start(audioCtx.currentTime + note.time);
+                        osc.stop(audioCtx.currentTime + note.time + note.dur);
+                    });
+                }
+            } catch (e) { console.log("Audio bloqueado."); }
+        }
+
+        const stopOrderAlert = (e) => {
+            if (orderAlertInterval) {
+                clearInterval(orderAlertInterval);
+                orderAlertInterval = null;
+                document.removeEventListener('mousedown', stopOrderAlert, true);
+                document.removeEventListener('touchstart', stopOrderAlert, true);
+                document.removeEventListener('keydown', stopOrderAlert, true);
+            }
+        };
+
+        function startOrderAlert() {
+            if (orderAlertInterval) return;
+            playOrderSound();
+            orderAlertInterval = setInterval(playOrderSound, 4500);
+            document.addEventListener('mousedown', stopOrderAlert, true);
+            document.addEventListener('touchstart', stopOrderAlert, true);
+            document.addEventListener('keydown', stopOrderAlert, true);
+        }
+
+        function runAutoSync() {
+            const saved = localStorage.getItem('hostelpro_v8_final_fixed');
+            if(saved) {
+                const cloudData = JSON.parse(saved);
+                const currentCount = state.orders ? state.orders.length : 0;
+                const newCount = cloudData.orders ? cloudData.orders.length : 0;
+                if(newCount > currentCount) {
+                    state = cloudData;
+                    renderAll();
+                    startOrderAlert();
+                }
+            }
+        }
+
+        function init() {
+            const saved = localStorage.getItem('hostelpro_v8_final_fixed');
+            if(saved) state = JSON.parse(saved);
+            
+            if(!state.deliveryPeople) state.deliveryPeople = [];
+            if(!state.orders) state.orders = [];
+            if(!state.cart) state.cart = [];
+            if(!state.settings.addToCartText) state.settings.addToCartText = '🛒 Añadir al Carrito';
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('mode') === 'customer') {
+                const btn = document.getElementById('admin-access-btn');
+                if(btn) btn.style.display = 'none';
+            }
+
+            state.activeCategory = state.categories[0];
+            applyDynamicColors();
+            checkStoreStatus();
+            renderAll();
+            setupAdminSelectors();
+            generateQR();
+            updateShareLinkUI();
+
+            document.getElementById('p-image-input').addEventListener('change', (e) => handleMultiImageUpload(e, tempImages, renderImagePreviews));
+            document.getElementById('cfg-logo-input').addEventListener('change', (e) => handleSingleImageUpload(e, (src) => {
+                state.settings.logo = src; renderLogo(); persist();
+            }));
+            
+            document.getElementById('import-data-input').addEventListener('change', importStoreData);
+            document.getElementById('admin-auth-pass').addEventListener('keypress', (e) => e.key === 'Enter' && checkAdminPassword());
+
+            setInterval(checkStoreStatus, 60000);
+            setInterval(runAutoSync, 30000);
+        }
+
+        function handleMultiImageUpload(e, array, callback) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (event) => { array.push(event.target.result); callback(); };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function handleSingleImageUpload(e, callback) {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => callback(event.target.result);
+            reader.readAsDataURL(file);
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('p-image-previews');
+            container.innerHTML = tempImages.map((src, i) => `
+                <div class="relative flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 border-slate-100 shadow-sm">
+                    <img src="${src}" class="w-full h-full object-cover">
+                    <button onclick="tempImages.splice(${i},1);renderImagePreviews()" class="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 flex items-center justify-center rounded-lg text-[10px]">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function renderLogo() {
+            const img = document.getElementById('brand-logo-img');
+            const placeholder = document.getElementById('logo-placeholder');
+            if(state.settings.logo) { img.src = state.settings.logo; img.classList.remove('hidden'); placeholder.classList.add('hidden'); }
+            else { img.classList.add('hidden'); placeholder.classList.remove('hidden'); }
+        }
+
+        function persist() { localStorage.setItem('hostelpro_v8_final_fixed', JSON.stringify(state)); }
+
+        function applyDynamicColors() {
+            const styleEl = document.getElementById('dynamic-styles');
+            styleEl.innerHTML = `
+                :root { --primary: ${state.settings.colorPrimary}; --text-main: ${state.settings.colorText}; }
+                body { font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; color: var(--text-main); }
+                .text-primary { color: var(--primary); }
+                .bg-primary { background-color: var(--primary); }
+                .border-primary { border-color: var(--primary); }
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .modal-blur { backdrop-filter: blur(12px); }
+                .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+                .bg-pattern { background-color: #f8fafc; background-image: radial-gradient(#e2e8f0 0.5px, transparent 0.5px); background-size: 10px 10px; }
+                .admin-tab-btn.active { border-color: var(--primary); color: var(--primary); border-width: 2px; }
+                .product-img-container { width: 100%; height: 200px; overflow: hidden; position: relative; }
+                @media (min-width: 640px) { .product-img-container { height: 240px; } }
+                .product-img-container img { width: 100%; height: 100%; object-fit: cover; }
+            `;
+        }
+
+        function checkStoreStatus() {
+            const now = new Date();
+            const days = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+            const todayName = days[now.getDay()];
+            const config = state.hours.find(h => h.day === todayName);
+            if (!config || config.closed) { state.isOpen = false; } else {
+                const currentTime = now.getHours() * 60 + now.getMinutes();
+                const [oh, om] = config.open.split(':').map(Number);
+                const [ch, cm] = config.close.split(':').map(Number);
+                state.isOpen = currentTime >= (oh * 60 + om) && currentTime <= (ch * 60 + cm);
+            }
+            const badge = document.getElementById('status-badge');
+            if(state.isOpen) { badge.innerText = "Abierto"; badge.className = "text-[9px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 shadow-sm border border-green-200"; }
+            else { badge.innerText = "Cerrado"; badge.className = "text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shadow-sm border border-red-200"; }
+        }
+
+        function renderAll() {
+            document.getElementById('brand-name').innerText = state.settings.name;
+            renderLogo(); renderCategoryBar(); renderProductMenu(); renderCart(); 
+            renderInventory(); renderAdminOrders(); renderHoursConfig(); 
+            renderDeliveryPeople(); renderAdminCategories(); updateCurrencySelectors();
+        }
+
+        function renderCategoryBar() {
+            const bar = document.getElementById('category-bar');
+            bar.innerHTML = state.categories.map(cat => `
+                <button onclick="setActiveCat('${cat}')" class="whitespace-nowrap px-4 sm:px-6 py-2 rounded-2xl text-xs sm:text-sm font-bold shadow-sm transition-all border ${state.activeCategory === cat ? 'bg-primary text-white border-transparent' : 'bg-white text-slate-400 border-slate-100'}">${cat}</button>
+            `).join('');
+        }
+
+        function renderProductMenu() {
+            const container = document.getElementById('product-container');
+            const filtered = state.products.filter(p => p.category === state.activeCategory);
+            if(filtered.length === 0) { container.innerHTML = `<div class="col-span-full py-20 text-center opacity-30 text-slate-400 text-sm italic">Categoría vacía.</div>`; return; }
+            container.innerHTML = filtered.map(p => {
+                const minPrice = p.variants.length > 0 ? Math.min(...p.variants.map(v => v.price)) : 0;
+                const img = (p.images && p.images.length > 0) ? p.images[0] : 'https://via.placeholder.com/400x300?text=HostelPro';
+                return `
+                <div class="bg-white rounded-[32px] overflow-hidden shadow-sm border border-slate-100 hover:shadow-xl transition-all flex flex-col group">
+                    <div class="product-img-container">
+                        <img src="${img}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700">
+                        <div class="absolute bottom-3 left-3 bg-white/95 backdrop-blur px-3 py-1 rounded-xl text-slate-900 font-bold text-xs shadow-sm">desde ${minPrice.toFixed(2)}${state.settings.currency.symbol}</div>
+                    </div>
+                    <div class="p-4 sm:p-6 flex flex-col flex-1">
+                        <h3 class="font-bold text-lg text-slate-900 mb-1 sm:mb-2">${p.name}</h3>
+                        <p class="text-slate-400 text-[11px] line-clamp-2 mb-4 flex-1">${p.description}</p>
+                        <button onclick="openProductModal('${p.id}')" class="w-full py-2.5 sm:py-3.5 ${state.isOpen ? 'bg-primary text-white shadow-lg' : 'bg-slate-100 text-slate-400 cursor-not-allowed'} rounded-2xl font-bold text-xs sm:text-sm transition-all active:scale-95">
+                            ${state.isOpen ? state.settings.addToCartText : 'Cerrado'}
+                        </button>
+                    </div>
+                </div>`}).join('');
+        }
+
+        function setActiveCat(cat) { state.activeCategory = cat; renderCategoryBar(); renderProductMenu(); }
+
+        function openProductModal(id) {
+            const p = state.products.find(prod => prod.id === id);
+            if(!p) return;
+            currentModalProduct = p; currentModalQty = 1;
+            const modal = document.getElementById('product-modal');
+            document.getElementById('modal-title').innerText = p.name;
+            document.getElementById('modal-desc').innerText = p.description;
+            document.getElementById('modal-qty').innerText = currentModalQty;
+            const imgContainer = document.getElementById('modal-images');
+            imgContainer.innerHTML = p.images.length > 0 ? p.images.map(url => `<img src="${url}" class="w-full flex-shrink-0 object-cover snap-center">`) : `<img src="https://via.placeholder.com/400x300?text=Sin+Imagen" class="w-full flex-shrink-0 object-cover snap-center">`;
+            const sizeOptions = document.getElementById('modal-size-options');
+            sizeOptions.innerHTML = p.variants.map((v, i) => `<button onclick="selectVariant(${i})" class="v-btn p-3 border-2 rounded-2xl text-left transition-all ${i === 0 ? 'border-primary bg-orange-50/50' : 'border-slate-100'}" data-index="${i}"><span class="block font-bold text-xs sm:text-sm text-slate-900">${v.name}</span><span class="text-[10px] sm:text-xs text-primary font-bold">${v.price.toFixed(2)}${state.settings.currency.symbol}</span></button>`).join('');
+            currentModalProduct._selectedVariantIndex = 0;
+            const extrasCont = document.getElementById('modal-extras-container');
+            if(p.extras && p.extras.length > 0) { extrasCont.classList.remove('hidden'); document.getElementById('modal-extra-options').innerHTML = p.extras.map((e, i) => `<label class="flex items-center justify-between p-3 bg-slate-50 rounded-2xl cursor-pointer border border-transparent"><div class="flex items-center gap-3"><input type="checkbox" class="e-chk w-4 h-4 rounded border-slate-300 text-primary" value="${i}" onchange="updateModalPrice()"><span class="text-xs font-bold text-slate-700">${e.name}</span></div><span class="text-[10px] font-bold text-blue-600">+${e.price.toFixed(2)}${state.settings.currency.symbol}</span></label>`).join(''); } else extrasCont.classList.add('hidden');
+            const remsCont = document.getElementById('modal-removals-container');
+            if(p.removals && p.removals.length > 0) { remsCont.classList.remove('hidden'); document.getElementById('modal-removal-options').innerHTML = p.removals.map((r, i) => `<label class="flex items-center gap-3 p-3 bg-slate-50 rounded-2xl cursor-pointer border border-transparent"><input type="checkbox" class="r-chk w-4 h-4 rounded border-slate-300 text-red-600" value="${i}"><span class="text-xs font-bold text-slate-700">${r.name}</span></label>`).join(''); } else remsCont.classList.add('hidden');
+            document.getElementById('modal-add-btn').onclick = addCurrentToCart;
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            document.body.classList.add('modal-active');
+            updateModalPrice();
+        }
+
+        function selectVariant(idx) { currentModalProduct._selectedVariantIndex = idx; document.querySelectorAll('.v-btn').forEach((btn, i) => { btn.classList.toggle('border-primary', i === idx); btn.classList.toggle('bg-orange-50/50', i === idx); btn.classList.toggle('border-slate-100', i !== idx); }); updateModalPrice(); }
+        function updateModalPrice() { const v = currentModalProduct.variants[currentModalProduct._selectedVariantIndex]; let extras = 0; document.querySelectorAll('.e-chk:checked').forEach(chk => extras += currentModalProduct.extras[parseInt(chk.value)].price); document.getElementById('modal-price-total').innerText = `${((v.price + extras) * currentModalQty).toFixed(2)}${state.settings.currency.symbol}`; }
+        function modQty(val) { currentModalQty = Math.max(1, currentModalQty + val); document.getElementById('modal-qty').innerText = currentModalQty; updateModalPrice(); }
+        function closeModal() { document.getElementById('product-modal').classList.add('hidden'); document.body.classList.remove('modal-active'); }
+
+        function addCurrentToCart() {
+            const p = currentModalProduct; if(!p) return;
+            const variant = p.variants[p._selectedVariantIndex];
+            const extras = Array.from(document.querySelectorAll('.e-chk:checked')).map(chk => p.extras[parseInt(chk.value)]);
+            const removals = Array.from(document.querySelectorAll('.r-chk:checked')).map(chk => p.removals[parseInt(chk.value)]);
+            if(!state.cart) state.cart = [];
+            state.cart.push({ cartId: Date.now(), id: p.id, name: p.name, variant, extras, removals, qty: currentModalQty, unitPrice: variant.price + extras.reduce((a,b) => a+b.price, 0) });
+            renderCart(); closeModal(); persist();
+        }
+
+        function renderCart() {
+            const count = state.cart ? state.cart.reduce((a, b) => a + b.qty, 0) : 0;
+            document.getElementById('cart-counter').innerText = count;
+            const list = document.getElementById('cart-list'); const totalEl = document.getElementById('cart-total');
+            if(!state.cart || state.cart.length === 0) { list.innerHTML = `<div class="text-center py-20 opacity-30 text-sm">Vacío.</div>`; totalEl.innerText = `0.00`; return; }
+            let total = 0;
+            list.innerHTML = state.cart.map(item => {
+                const sub = item.unitPrice * item.qty; total += sub;
+                return `<div class="bg-white p-4 sm:p-5 rounded-3xl shadow-sm border border-slate-100 flex justify-between items-center"><div class="flex-1"><div class="flex justify-between items-start mb-1"><h4 class="font-bold text-slate-900 text-sm">${item.name}</h4><span class="font-bold text-slate-900 text-sm">${sub.toFixed(2)}${state.settings.currency.symbol}</span></div><p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">${item.variant.name}</p>${item.extras.length ? `<p class="text-[9px] text-blue-500 font-bold">+ ${item.extras.map(e=>e.name).join(', ')}</p>` : ''}${item.removals.length ? `<p class="text-[9px] text-red-400 font-bold italic">SIN: ${item.removals.map(r=>r.name).join(', ')}</p>` : ''}<div class="flex items-center gap-4 mt-3"><div class="flex items-center bg-slate-50 rounded-xl border overflow-hidden p-0.5"><button onclick="modCartQty(${item.cartId}, -1)" class="w-7 h-7 font-bold">-</button><span class="w-7 text-center font-bold text-xs">${item.qty}</span><button onclick="modCartQty(${item.cartId}, 1)" class="w-7 h-7 font-bold">+</button></div><button onclick="removeFromCart(${item.cartId})" class="text-[9px] text-slate-300 font-bold uppercase hover:text-red-500">Quitar</button></div></div></div>`}).join('');
+            totalEl.innerText = `${total.toFixed(2)}${state.settings.currency.symbol}`;
+            const isD = state.settings.deliveryType === 'delivery';
+            document.getElementById('btn-delivery').className = `py-2.5 border-2 rounded-2xl font-bold transition-all ${isD ? 'bg-primary border-primary text-white shadow-sm' : 'bg-white border-slate-100 text-slate-400'}`;
+            document.getElementById('btn-pickup').className = `py-2.5 border-2 rounded-2xl font-bold transition-all ${!isD ? 'bg-primary border-primary text-white shadow-sm' : 'bg-white border-slate-100 text-slate-400'}`;
+            document.getElementById('payment-method-section').classList.toggle('hidden', !isD);
+            updatePaymentButtons();
+        }
+
+        function updatePaymentButtons() {
+            const isCash = state.settings.paymentMethod === 'cash';
+            document.getElementById('btn-pay-cash').className = `py-2.5 border-2 rounded-2xl font-bold transition-all ${isCash ? 'bg-primary border-primary text-white shadow-sm' : 'bg-white border-slate-100 text-slate-400'}`;
+            document.getElementById('btn-pay-card').className = `py-2.5 border-2 rounded-2xl font-bold transition-all ${!isCash ? 'bg-primary border-primary text-white shadow-sm' : 'bg-white border-slate-100 text-slate-400'}`;
+        }
+
+        function setPayment(m) { state.settings.paymentMethod = m; updatePaymentButtons(); persist(); }
+        function modCartQty(id, v) { const i = state.cart.find(x => x.cartId === id); if(i) { i.qty = Math.max(1, i.qty + v); renderCart(); persist(); } }
+        function removeFromCart(id) { state.cart = state.cart.filter(x => x.cartId !== id); renderCart(); persist(); }
+        function setDelivery(t) { state.settings.deliveryType = t; renderCart(); persist(); }
+
+        function checkout() {
+            const name = document.getElementById('order-name').value;
+            const phone = document.getElementById('order-phone').value;
+            const addr = document.getElementById('order-address').value;
+            const notes = document.getElementById('order-notes').value;
+            if(!name || !phone || (state.settings.deliveryType === 'delivery' && !addr)) return alert("Por favor completa tus datos.");
+            
+            const orderData = { 
+                id: Date.now(), date: new Date().toLocaleString(), customer: name, phone, address: addr || 'Recogida en local', notes, items: [...state.cart], total: document.getElementById('cart-total').innerText, status: 'Pendiente', type: state.settings.deliveryType, paymentMethod: state.settings.paymentMethod 
+            };
+            
+            state.orders.unshift(orderData);
+            state.cart = []; persist(); renderAll(); toggleView('menu');
+            document.getElementById('success-modal').classList.remove('hidden');
+            document.getElementById('success-modal').classList.add('flex');
+            document.body.classList.add('modal-active');
+        }
+
+        function closeSuccessModal() { document.getElementById('success-modal').classList.add('hidden'); document.body.classList.remove('modal-active'); }
+
+        function exportStoreData() {
+            const dataStr = JSON.stringify(state, null, 2);
+            const blob = new Blob([dataStr], {type: "application/json"});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Backup_${state.settings.name.replace(/\s+/g, '_')}_${new Date().toLocaleDateString()}.json`;
+            link.click();
+        }
+
+        function importStoreData(e) {
+            const file = e.target.files[0]; if(!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if(confirm("¿Restaurar copia de seguridad? Se borrarán los datos actuales.")) {
+                        state = imported; persist(); location.reload();
+                    }
+                } catch(err) { alert("Archivo no válido."); }
+            };
+            reader.readAsText(file);
+        }
+
+        function resetStoreData() {
+            if(confirm("⚠️ ¿Deseas BORRAR TODOS los datos de la tienda permanentemente?")) { localStorage.clear(); location.reload(); }
+        }
+
+        function openAdminAuth() {
+            const modal = document.getElementById('admin-auth-modal');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
+            document.body.classList.add('modal-active');
+            if (!state.settings.passwordHash) { document.getElementById('auth-login-view').classList.add('hidden'); document.getElementById('auth-setup-view').classList.remove('hidden'); }
+            else { document.getElementById('auth-setup-view').classList.add('hidden'); document.getElementById('auth-login-view').classList.remove('hidden'); document.getElementById('admin-auth-pass').value = ""; document.getElementById('admin-auth-pass').focus(); }
+        }
+
+        async function setupAdminPassword() {
+            const p1 = document.getElementById('admin-setup-pass1').value;
+            const p2 = document.getElementById('admin-setup-pass2').value;
+            if (p1.length < 6) return alert("La contraseña debe tener mínimo 6 caracteres.");
+            if (p1 !== p2) return alert("Las contraseñas no coinciden.");
+            state.settings.passwordHash = await hashPassword(p1); persist(); closeAdminAuth(); toggleView('admin');
+        }
+
+        async function changeAdminPassword() {
+            const old = document.getElementById('change-pass-old').value;
+            const n1 = document.getElementById('change-pass-new1').value;
+            const n2 = document.getElementById('change-pass-new2').value;
+            if(!old || !n1 || !n2) return alert("Completa todos los campos.");
+            const oldHash = await hashPassword(old);
+            if(oldHash !== state.settings.passwordHash) return alert("Contraseña actual incorrecta.");
+            if(n1.length < 6) return alert("La nueva contraseña debe tener mínimo 6 caracteres.");
+            if(n1 !== n2) return alert("Las nuevas contraseñas no coinciden.");
+            state.settings.passwordHash = await hashPassword(n1); persist();
+            document.getElementById('change-pass-old').value = ""; document.getElementById('change-pass-new1').value = ""; document.getElementById('change-pass-new2').value = "";
+            alert("Contraseña actualizada con éxito.");
+        }
+
+        async function checkAdminPassword() {
+            const hash = await hashPassword(document.getElementById('admin-auth-pass').value);
+            if (hash === state.settings.passwordHash) { closeAdminAuth(); toggleView('admin'); }
+            else alert("Contraseña incorrecta.");
+        }
+
+        function closeAdminAuth() { document.getElementById('admin-auth-modal').classList.add('hidden'); document.body.classList.remove('modal-active'); }
+        function logoutAdmin() { toggleView('menu'); }
+
+        function toggleView(v) {
+            document.getElementById('view-menu').classList.toggle('hidden', v !== 'menu');
+            document.getElementById('view-cart').classList.toggle('hidden', v !== 'cart');
+            document.getElementById('view-admin').classList.toggle('hidden', v !== 'admin');
+            if(v === 'menu') renderProductMenu();
+            if(v === 'admin') { renderAdminOrders(); generateQR(); updateShareLinkUI(); }
+        }
+
+        function switchAdminTab(tab) {
+            document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelectorAll('.admin-tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`admin-tab-${tab}`).classList.remove('hidden');
+            event.currentTarget.classList.add('active');
+        }
+
+        function setupAdminSelectors() {
+            document.getElementById('cfg-name').value = state.settings.name;
+            document.getElementById('cfg-phone').value = state.settings.phone;
+            document.getElementById('cfg-btn-text').value = state.settings.addToCartText;
+            document.getElementById('cfg-color-primary').value = state.settings.colorPrimary;
+            document.getElementById('cfg-color-text').value = state.settings.colorText;
+            document.getElementById('cfg-delivery-group').value = state.settings.deliveryGroup || '';
+        }
+
+        function updateCurrencySelectors() {
+            const sel = document.getElementById('cfg-currency');
+            sel.innerHTML = LATAM_CURRENCIES.map(c => `<option value="${c.code}" ${state.settings.currency.code === c.code ? 'selected' : ''}>${c.code} (${c.symbol})</option>`).join('');
+        }
+
+        async function saveGlobalSettings() {
+            state.settings.name = document.getElementById('cfg-name').value;
+            state.settings.phone = document.getElementById('cfg-phone').value;
+            state.settings.addToCartText = document.getElementById('cfg-btn-text').value;
+            state.settings.colorPrimary = document.getElementById('cfg-color-primary').value;
+            state.settings.colorText = document.getElementById('cfg-color-text').value;
+            state.settings.currency = LATAM_CURRENCIES.find(c => c.code === document.getElementById('cfg-currency').value);
+            applyDynamicColors(); persist(); renderAll(); alert("Guardado.");
+        }
+
+        function addCategory() {
+            const val = document.getElementById('cfg-new-category').value.trim();
+            if(val && !state.categories.includes(val)) {
+                state.categories.push(val);
+                document.getElementById('cfg-new-category').value = '';
+                persist(); renderAll();
+            }
+        }
+
+        function removeCategory(cat) {
+            if(confirm(`¿Borrar categoría ${cat}?`)) {
+                state.categories = state.categories.filter(c => c !== cat);
+                persist(); renderAll();
+            }
+        }
+
+        function renderAdminCategories() {
+            const box = document.getElementById('admin-cat-list-box');
+            if(box) {
+                box.innerHTML = state.categories.map(c => `
+                    <div class="flex justify-between items-center bg-slate-50 p-2.5 rounded-2xl text-[10px] font-bold border border-slate-100 mb-1 w-full">
+                        <span class="truncate pr-2">${c}</span>
+                        <button onclick="removeCategory('${c}')" class="text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors flex-shrink-0">✕</button>
+                    </div>
+                `).join('');
+            }
+            const pCatSelect = document.getElementById('p-category');
+            if(pCatSelect) { pCatSelect.innerHTML = state.categories.map(c => `<option value="${c}">${c}</option>`).join(''); }
+            setupAdminSelectors();
+        }
+
+        function addDeliveryPerson() {
+            const id = document.getElementById('edit-delivery-id').value;
+            const name = document.getElementById('delivery-name').value;
+            const phone = document.getElementById('delivery-phone').value;
+            if(!name || !phone) return alert("Faltan datos.");
+            if(id) { const idx = state.deliveryPeople.findIndex(p => p.id == id); if(idx >= 0) state.deliveryPeople[idx] = { id: parseInt(id), name, phone }; } 
+            else { state.deliveryPeople.push({ id: Date.now(), name, phone }); }
+            resetDeliveryForm(); persist(); renderDeliveryPeople();
+        }
+
+        function editDeliveryPerson(id) {
+            const p = state.deliveryPeople.find(x => x.id == id);
+            if(!p) return;
+            document.getElementById('edit-delivery-id').value = p.id;
+            document.getElementById('delivery-name').value = p.name;
+            document.getElementById('delivery-phone').value = p.phone;
+            document.getElementById('delivery-form-title').innerText = "Editar Repartidor";
+            document.getElementById('delivery-save-btn').innerText = "Guardar Cambios";
+            document.getElementById('delivery-reset-btn').classList.remove('hidden');
+        }
+
+        function resetDeliveryForm() {
+            document.getElementById('edit-delivery-id').value = ""; document.getElementById('delivery-name').value = ""; document.getElementById('delivery-phone').value = "";
+            document.getElementById('delivery-form-title').innerText = "Nuevo Repartidor"; document.getElementById('delivery-save-btn').innerText = "Añadir"; document.getElementById('delivery-reset-btn').classList.add('hidden');
+        }
+
+        function deleteDeliveryPerson(id) { if(confirm("¿Eliminar repartidor?")) { state.deliveryPeople = state.deliveryPeople.filter(p => p.id !== id); persist(); renderDeliveryPeople(); } }
+        function saveDeliveryGroup() { state.settings.deliveryGroup = document.getElementById('cfg-delivery-group').value; persist(); alert("Grupo guardado."); }
+
+        function renderDeliveryPeople() {
+            const list = document.getElementById('delivery-people-list');
+            list.innerHTML = state.deliveryPeople.map(p => `
+                <div class="p-4 flex justify-between items-center bg-slate-50/50">
+                    <div><h4 class="font-bold text-sm">${p.name}</h4><p class="text-[10px] text-slate-400">${p.phone}</p></div>
+                    <div class="flex gap-2">
+                        <button onclick="editDeliveryPerson(${p.id})" class="p-2 text-blue-500 bg-blue-50 rounded-xl">✏️</button>
+                        <button onclick="deleteDeliveryPerson(${p.id})" class="p-2 text-red-400 bg-red-50 rounded-xl">🗑️</button>
+                    </div>
+                </div>`).join('');
+            document.getElementById('delivery-target-select').innerHTML = `<option value="group">📢 Grupo de Reparto</option>` + state.deliveryPeople.map(p => `<option value="${p.phone}">${p.name}</option>`).join('');
+        }
+
+        function openDeliveryModal(orderId) {
+            currentDispatchOrder = state.orders.find(o => o.id === orderId);
+            if(!currentDispatchOrder) return;
+            document.getElementById('delivery-modal').classList.remove('hidden');
+            document.getElementById('delivery-modal').classList.add('flex');
+            document.getElementById('dispatch-confirm-btn').onclick = dispatchToDelivery;
+        }
+
+        function closeDeliveryModal() { document.getElementById('delivery-modal').classList.add('hidden'); }
+
+        function dispatchToDelivery() {
+            const prepMinutes = parseInt(document.getElementById('delivery-prep-time').value);
+            const target = document.getElementById('delivery-target-select').value;
+            const o = currentDispatchOrder; const now = new Date();
+            const readyTime = new Date(now.getTime() + prepMinutes * 60000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            let msg = `🏪 *${state.settings.name.toUpperCase()}*\n------------------------------------\n🆔 *ORDEN:* #${o.id}\n⏰ *PREPARACIÓN:* ${prepMinutes} min\n🕒 *LISTO A LAS:* ${readyTime}\n------------------------------------\n📍 *DIRECCIÓN:* ${o.address}\n👤 *CLIENTE:* ${o.customer}\n📞 *TELÉFONO:* ${o.phone}\n💰 *MÉTODO PAGO:* ${o.paymentMethod === 'cash' ? '💵 Efectivo' : '💳 Tarjeta'}\n💵 *TOTAL A COBRAR:* ${o.total}\n------------------------------------\n📦 *PRODUCTOS:* \n`;
+            o.items.forEach(i => { msg += ` ▪️ ${i.qty}x ${i.name} (${i.variant.name})\n`; if(i.extras.length) msg += `   └─ ➕ Extra: ${i.extras.map(e=>e.name).join(', ')}\n`; if(i.removals.length) msg += `   └─ ➖ Sin: ${i.removals.map(r=>r.name).join(', ')}\n`; });
+            if(o.notes) msg += `\n📝 *NOTAS:* ${o.notes}\n`; msg += `------------------------------------\n🚀 ¡Buen servicio! 🚀`;
+            let url = (target === 'group') ? (state.settings.deliveryGroup || '') : `https://wa.me/${target.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+            if(target === 'group' && !url.includes('http')) url = `https://wa.me/${url.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`;
+            closeDeliveryModal(); window.open(url, '_blank');
+        }
+
+        function printOrder(id) {
+            const o = state.orders.find(x => x.id === id);
+            if(!o) return;
+            
+            let content = `
+                <div style="font-family: monospace; width: 300px; padding: 10px; color: #000;">
+                    <div style="text-align: center; border-bottom: 1px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
+                        <h2 style="margin: 0; font-family: sans-serif;">${state.settings.name}</h2>
+                        <p style="margin: 5px 0;">Ticket de Pedido</p>
+                    </div>
+                    <div style="font-size: 13px;">
+                        <p style="margin: 3px 0;"><strong>ID:</strong> #${o.id.toString().slice(-4)}</p>
+                        <p style="margin: 3px 0;"><strong>Fecha:</strong> ${o.date}</p>
+                        <p style="margin: 3px 0;"><strong>Cliente:</strong> ${o.customer}</p>
+                        <p style="margin: 3px 0;"><strong>Tipo:</strong> ${o.type === 'delivery' ? '🚀 Domicilio' : '🥡 Recogida'}</p>
+                        <p style="margin: 3px 0;"><strong>Pago:</strong> ${o.paymentMethod === 'cash' ? 'Efectivo' : 'Tarjeta'}</p>
+                        ${o.address !== 'Recogida en local' ? `<p style="margin: 3px 0;"><strong>Dir:</strong> ${o.address}</p>` : ''}
+                    </div>
+                    <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+                    <div style="font-size: 13px;">
+                        ${o.items.map(i => `
+                            <div style="margin-bottom: 8px;">
+                                <div style="display: flex; justify-content: space-between;">
+                                    <span><strong>${i.qty}x</strong> ${i.name}</span>
+                                    <span>${(i.unitPrice * i.qty).toFixed(2)}${state.settings.currency.symbol}</span>
+                                </div>
+                                <div style="font-size: 11px; margin-left: 15px; color: #555;">
+                                    (${i.variant.name})
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div style="border-bottom: 1px dashed #000; margin: 10px 0;"></div>
+                    <div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: bold;">
+                        <span>TOTAL</span>
+                        <span>${o.total}</span>
+                    </div>
+                    ${o.notes ? `<div style="margin-top: 15px; font-size: 11px; border: 1px solid #000; padding: 5px;"><strong>NOTAS:</strong> ${o.notes}</div>` : ''}
+                    <div style="text-align: center; margin-top: 20px; font-size: 10px;">
+                        <p>Gracias por confiar en nosotros</p>
+                    </div>
+                </div>
+            `;
+
+            const printWin = window.open('', '_blank');
+            printWin.document.write('<html><head><title>HostelPro - Imprimir Pedido</title></head><body style="margin:0; padding:0;">' + content + '</body></html>');
+            printWin.document.close();
+            
+            // Retraso para asegurar que el contenido se cargue antes de llamar al diálogo de impresión
+            setTimeout(() => {
+                printWin.focus();
+                printWin.print();
+                printWin.close();
+            }, 500);
+        }
+
+        function addVariantUI() { const n = document.getElementById('v-name').value; const p = parseFloat(document.getElementById('v-price').value); if(n && !isNaN(p)) { tempVariants.push({ name: n, price: p }); renderTempLists(); document.getElementById('v-name').value = ""; document.getElementById('v-price').value = ""; } }
+        function addExtraUI() { const n = document.getElementById('e-name').value; const p = parseFloat(document.getElementById('e-price').value) || 0; if(n) { tempExtras.push({ name: n, price: p }); renderTempLists(); document.getElementById('e-name').value = ""; document.getElementById('e-price').value = "0"; } }
+        function addRemovalUI() { const n = document.getElementById('r-name').value; if(n) { tempRemovals.push({ name: n }); renderTempLists(); document.getElementById('r-name').value = ""; } }
+        
+        function renderTempLists() {
+            const s = state.settings.currency.symbol;
+            document.getElementById('variants-list').innerHTML = tempVariants.map((v, i) => `<div class="bg-white p-2 rounded-xl border flex justify-between text-[10px] font-bold"><span>${v.name} (${v.price.toFixed(2)}${s})</span> <button onclick="tempVariants.splice(${i},1);renderTempLists()" class="text-red-500">✕</button></div>`).join('');
+            document.getElementById('extras-list').innerHTML = tempExtras.map((e, i) => `<div class="bg-white p-2 rounded-xl border flex justify-between text-[10px] font-bold"><span>${e.name} (+${e.price.toFixed(2)}${s})</span> <button onclick="tempExtras.splice(${i},1);renderTempLists()" class="text-red-500">✕</button></div>`).join('');
+            document.getElementById('removals-list').innerHTML = tempRemovals.map((r, i) => `<div class="bg-white p-2 rounded-xl border flex justify-between text-[10px] font-bold"><span>${r.name}</span> <button onclick="tempRemovals.splice(${i},1);renderTempLists()" class="text-red-500">✕</button></div>`).join('');
+        }
+
+        function saveProduct() {
+            const id = document.getElementById('edit-product-id').value || Date.now().toString();
+            const product = { id, name: document.getElementById('p-name').value, description: document.getElementById('p-desc').value, category: document.getElementById('p-category').value, images: [...tempImages], variants: [...tempVariants], extras: [...tempExtras], removals: [...tempRemovals] };
+            if(!product.name || product.variants.length === 0) return alert("Faltan datos obligatorios.");
+            const idx = state.products.findIndex(p => p.id === id); if(idx >= 0) state.products[idx] = product; else state.products.push(product);
+            persist(); resetProductForm(); renderProductMenu(); renderInventory(); alert("Guardado.");
+        }
+
+        function editProduct(id) {
+            const p = state.products.find(x => x.id === id);
+            document.getElementById('edit-product-id').value = p.id; document.getElementById('p-name').value = p.name; document.getElementById('p-desc').value = p.description; document.getElementById('p-category').value = p.category;
+            tempImages = [...p.images]; tempVariants = [...p.variants]; tempExtras = [...p.extras]; tempRemovals = [...p.removals];
+            renderImagePreviews(); renderTempLists(); window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function deleteProduct(id) { if(confirm("¿Eliminar?")) { state.products = state.products.filter(p => p.id !== id); persist(); renderInventory(); renderProductMenu(); } }
+        function resetProductForm() { document.getElementById('edit-product-id').value = ""; document.getElementById('p-name').value = ""; document.getElementById('p-desc').value = ""; tempImages = []; tempVariants = []; tempExtras = []; tempRemovals = []; renderImagePreviews(); renderTempLists(); }
+
+        function renderInventory() {
+            const container = document.getElementById('admin-inventory');
+            if(state.products.length === 0) { container.innerHTML = `<div class="p-6 text-center text-slate-300 text-xs italic">Vacío.</div>`; return; }
+            let html = '';
+            state.categories.forEach(cat => {
+                const filtered = state.products.filter(p => p.category === cat);
+                if (filtered.length > 0) {
+                    html += `<div class="mb-6"><h4 class="text-[10px] font-bold uppercase text-slate-400 tracking-widest mb-3 px-2 border-l-2 border-primary ml-1">${cat}</h4><div class="space-y-2">
+                        ${filtered.map(p => `<div class="bg-white p-3 rounded-3xl flex justify-between items-center border shadow-sm"><div class="flex items-center gap-3"><img src="${p.images[0] || ''}" class="w-10 h-10 rounded-xl object-cover bg-slate-100"><div><h4 class="font-bold text-xs text-slate-700 line-clamp-1">${p.name}</h4><p class="text-[8px] text-slate-400 font-bold uppercase">${p.category}</p></div></div><div class="flex gap-1 opacity-100"><button onclick="editProduct('${p.id}')" class="p-1.5 text-blue-500 bg-blue-50 rounded-xl text-[10px]">✏️</button><button onclick="deleteProduct('${p.id}')" class="p-1.5 text-red-500 bg-red-50 rounded-xl text-[10px]">🗑️</button></div></div>`).join('')}</div></div>`;
+                }
+            });
+            const categoryLess = state.products.filter(p => !state.categories.includes(p.category));
+            if (categoryLess.length > 0) {
+                html += `<div class="mb-6"><h4 class="text-[10px] font-bold uppercase text-red-400 tracking-widest mb-3 px-2 border-l-2 border-red-400 ml-1">Otros</h4><div class="space-y-2">
+                    ${categoryLess.map(p => `<div class="bg-white p-3 rounded-3xl flex justify-between items-center border shadow-sm"><div class="flex items-center gap-3"><img src="${p.images[0] || ''}" class="w-10 h-10 rounded-xl object-cover bg-slate-100"><div><h4 class="font-bold text-xs text-slate-700 line-clamp-1">${p.name}</h4><p class="text-[8px] text-slate-400 font-bold uppercase">${p.category || 'N/A'}</p></div></div><div class="flex gap-1 opacity-100"><button onclick="editProduct('${p.id}')" class="p-1.5 text-blue-500 bg-blue-50 rounded-xl text-[10px]">✏️</button><button onclick="deleteProduct('${p.id}')" class="p-1.5 text-red-500 bg-red-50 rounded-xl text-[10px]">🗑️</button></div></div>`).join('')}</div></div>`;
+            }
+            container.innerHTML = html || `<div class="p-20 text-center text-slate-300 text-xs italic">Añade productos para verlos aquí.</div>`;
+        }
+
+        function renderAdminOrders() {
+            const list = document.getElementById('admin-orders-list');
+            const badge = document.getElementById('admin-pending-badge');
+            const pendingCount = state.orders.filter(o => o.status === 'Pendiente').length;
+            if(pendingCount > 0) { badge.innerText = pendingCount; badge.classList.remove('hidden'); } else { badge.classList.add('hidden'); }
+            document.getElementById('order-count-badge').innerText = `${state.orders.length} Pedidos`;
+            if(state.orders.length === 0) { list.innerHTML = `<div class="p-20 text-center text-slate-400 opacity-50">Sin pedidos.</div>`; return; }
+            list.innerHTML = state.orders.map(o => {
+                let statusClasses = o.status === 'Pendiente' ? "bg-yellow-50 border-yellow-200" : (o.status === 'Confirmado' ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200");
+                return `
+                <div class="p-6 hover:opacity-95 transition-all border-b ${statusClasses}">
+                    <div class="flex flex-col lg:flex-row justify-between gap-4">
+                        <div class="flex-1">
+                            <div class="flex flex-wrap items-center gap-x-6 gap-y-1 mb-2">
+                                <span class="text-3xl font-black text-slate-900 tracking-tighter">#${o.id.toString().slice(-4)}</span>
+                                <span class="text-2xl font-black text-primary">${o.paymentMethod === 'cash' ? '💵 EFECTIVO' : '💳 TARJETA'}</span>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase bg-white/50 px-2 py-1 rounded-lg">${o.date}</span>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2 mb-4">
+                                <h4 class="font-bold text-lg text-slate-800">${o.customer}</h4>
+                                <span class="text-xs text-slate-400">•</span>
+                                <p class="text-sm font-medium text-slate-600">${o.type === 'delivery' ? '🚀 Domicilio' : '🥡 Recoger'} — ${o.address}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 h-fit">
+                            <select onchange="updateOrderStatus(${o.id}, this.value)" class="text-[10px] font-bold p-2 bg-white border rounded-xl outline-none shadow-sm">
+                                <option value="Pendiente" ${o.status === 'Pendiente' ? 'selected' : ''}>Pendiente</option>
+                                <option value="Confirmado" ${o.status === 'Confirmado' ? 'selected' : ''}>Confirmado</option>
+                                <option value="Cancelado" ${o.status === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
+                            </select>
+                            <button onclick="printOrder(${o.id})" class="p-2 bg-slate-100 text-slate-600 rounded-xl shadow-sm hover:bg-slate-200 transition-colors" title="Imprimir Ticket">🖨️</button>
+                            <button onclick="openDeliveryModal(${o.id})" class="p-2 bg-orange-100 text-orange-600 rounded-xl shadow-sm hover:scale-105 transition-transform">🛵</button>
+                            <button onclick="deleteOrder(${o.id})" class="p-2 bg-red-50 text-red-400 rounded-xl hover:bg-red-100 transition-colors">🗑️</button>
+                        </div>
+                    </div>
+                    <div class="bg-white/40 backdrop-blur-sm border rounded-2xl p-4 shadow-sm space-y-1">
+                        ${o.items.map(i => `<div class="flex justify-between items-center py-1 text-slate-700">
+                            <span class="text-lg font-bold">x${i.qty} ${i.name}</span> 
+                            <span class="font-black text-slate-900">${(i.unitPrice * i.qty).toFixed(2)}${state.settings.currency.symbol}</span>
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-bold uppercase mb-2">Variante: ${i.variant.name}</div>`).join('')}
+                        <div class="border-t mt-3 pt-3 flex justify-between font-black text-primary text-base uppercase"><span>Total a cobrar</span><span>${o.total}</span></div>
+                    </div>
+                </div>`}).join('');
+        }
+
+        function updateOrderStatus(id, status) { const o = state.orders.find(x => x.id === id); if(o) { o.status = status; persist(); renderAdminOrders(); } }
+        function deleteOrder(id) { if(confirm("¿Eliminar pedido?")) { state.orders = state.orders.filter(x => x.id !== id); persist(); renderAdminOrders(); } }
+        function updateShareLinkUI() { const base = window.location.href.split('?')[0]; document.getElementById('share-url').value = base + "?mode=customer"; }
+        function copyShareLink() { const el = document.getElementById('share-url'); el.select(); document.execCommand('copy'); alert("📋 Enlace copiado."); }
+        function generateQR() { const c = document.getElementById("qrcode"); c.innerHTML = ""; const base = window.location.href.split('?')[0] + "?mode=customer"; new QRCode(c, { text: base, width: 120, height: 120, colorDark : "#0f172a", colorLight : "#ffffff" }); }
+        function downloadQR() { const canvas = document.querySelector("#qrcode canvas"); if(!canvas) return; const link = document.createElement('a'); link.download = `QR-Tienda.png`; link.href = canvas.toDataURL("image/png"); link.click(); }
+        function renderHoursConfig() { document.getElementById('hours-config').innerHTML = state.hours.map((h, i) => `<div class="flex items-center gap-2 bg-slate-50 p-2.5 rounded-2xl border border-slate-100"><span class="w-12 font-bold text-[9px] uppercase text-slate-500">${h.day.substring(0,3)}</span><input type="time" class="h-input border rounded p-1 flex-1 text-[10px]" data-idx="${i}" data-field="open" value="${h.open}"><input type="time" class="h-input border rounded p-1 flex-1 text-[10px]" data-idx="${i}" data-field="close" value="${h.close}"><label class="flex items-center gap-1 text-[9px] font-bold text-slate-400"><input type="checkbox" onchange="toggleDayClosed(${i})" ${h.closed ? 'checked' : ''} class="w-3 h-3 rounded"> Cerrado</label></div>`).join(''); }
+        function toggleDayClosed(i) { state.hours[i].closed = !state.hours[i].closed; persist(); }
+        function saveHours() { document.querySelectorAll('.h-input').forEach(input => state.hours[input.dataset.idx][input.dataset.field] = input.value); checkStoreStatus(); persist(); alert("Horarios actualizados."); }
+        window.onload = init;
+    </script>
+</body>
+</html>
