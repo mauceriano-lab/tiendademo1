@@ -19,6 +19,7 @@
         .product-img-container { width: 100%; height: 200px; overflow: hidden; position: relative; }
         .product-img-container img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease; }
         .modal-blur { backdrop-filter: blur(12px); }
+        /* Animación de carga */
         .loader { border: 4px solid #f3f3f3; border-top: 4px solid var(--primary); border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -48,8 +49,12 @@
 
         <!-- VISTA MENÚ -->
         <main id="view-menu" class="max-w-5xl mx-auto p-4 animate-in fade-in duration-500">
+            <!-- Descripción Tienda -->
+            <p id="store-desc" class="text-sm text-slate-500 mb-4 px-1 italic"></p>
+            
             <!-- Barra Categorías -->
             <div id="category-bar" class="flex gap-2 overflow-x-auto no-scrollbar pb-6 sticky top-[65px] bg-transparent z-30"></div>
+            
             <!-- Grid Productos -->
             <div id="product-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
         </main>
@@ -81,7 +86,7 @@
 
                 <input type="text" id="order-name" placeholder="Tu Nombre" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-primary/50">
                 <input type="text" id="order-address" placeholder="Dirección completa" class="w-full p-3 bg-slate-50 border rounded-xl outline-none focus:ring-2 focus:ring-primary/50">
-                <textarea id="order-notes" placeholder="Notas (alergias, etc...)" class="w-full p-3 bg-slate-50 border rounded-xl outline-none h-20 resize-none"></textarea>
+                <textarea id="order-notes" placeholder="Notas (alergias, timbre...)" class="w-full p-3 bg-slate-50 border rounded-xl outline-none h-20 resize-none"></textarea>
 
                 <div class="border-t pt-4 flex justify-between items-end">
                     <span class="text-slate-400 font-bold">Total a Pagar</span>
@@ -100,7 +105,7 @@
             <div class="bg-white w-full max-w-lg rounded-[32px] overflow-hidden shadow-2xl animate-in slide-in-from-bottom duration-300 flex flex-col max-h-[90vh]">
                 <div class="relative h-56 flex-shrink-0">
                     <img id="modal-img" src="" class="w-full h-full object-cover">
-                    <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-sm"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                    <button onclick="closeModal()" class="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-sm hover:bg-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
                 </div>
                 <div class="p-6 overflow-y-auto flex-1">
                     <h3 id="modal-title" class="text-2xl font-bold text-slate-900 mb-2"></h3>
@@ -149,7 +154,7 @@
         // ==========================================
 
         function getSheetID(url) {
-            if (url === 'PON_AQUI_TU_ENLACE_DE_GOOGLE_SHEETS') return null;
+            if (!url || url === 'PON_AQUI_TU_ENLACE_DE_GOOGLE_SHEETS') return null;
             const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
             return match ? match[1] : url; 
         }
@@ -157,7 +162,7 @@
         const SHEET_ID = getSheetID(GOOGLE_SHEET_LINK);
 
         let state = {
-            config: { name: "Mi Tienda", phone: "", color: "#f97316" },
+            config: { name: "Mi Tienda", desc: "", phone: "", prefix: "52", currency: "MXN", color: "#f97316" },
             categories: [],
             products: [],
             cart: [],
@@ -169,9 +174,8 @@
             selectedVariant: null
         };
 
-        // FORMATO DE MONEDA PERSONALIZADO: $ 1,296.00 MXN
         const formatPrice = (amount) => {
-            return '$ ' + amount.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' MXN';
+            return '$ ' + amount.toLocaleString('es-MX', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' ' + state.config.currency;
         };
 
         window.onload = async () => {
@@ -180,82 +184,100 @@
                 document.getElementById('loader-view').innerHTML = '<div class="p-10 text-center"><h2 class="text-xl font-bold text-red-500">Falta Enlace</h2><p class="text-slate-500 mt-2">Edita el HTML y pega el enlace del Excel.</p></div>';
                 return;
             }
-            await fetchAllData();
-            applyStyles();
-            renderApp();
-            document.getElementById('loader-view').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
+            await fetchData();
         };
 
-        async function fetchAllData() {
-            const base = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=`;
+        async function fetchData() {
+            // Se asume la primera hoja (gid=0 o por defecto) en formato CSV
+            const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv`;
+            
             try {
-                const [resConfig, resCat, resProd] = await Promise.all([
-                    fetch(base + 'Config'),
-                    fetch(base + 'Categorias'),
-                    fetch(base + 'Productos')
-                ]);
+                const response = await fetch(url);
+                const csvText = await response.text();
+                processData(csvText);
                 
-                parseConfig(await resConfig.text());
-                parseCategories(await resCat.text());
-                parseProducts(await resProd.text());
+                applyStyles();
+                renderApp();
+                document.getElementById('loader-view').classList.add('hidden');
+                document.getElementById('app').classList.remove('hidden');
+
             } catch (error) {
                 console.error(error);
-                alert("Error cargando datos. Verifica que el Excel esté 'Publicado en la web'.");
+                alert("Error cargando datos. Verifica que el Excel esté 'Publicado en la web' como CSV.");
             }
         }
 
-        function parseConfig(csv) {
-            Papa.parse(csv, { header: false, complete: (res) => {
-                res.data.forEach(r => {
-                    if(r[0] === 'Nombre') state.config.name = r[1];
-                    if(r[0] === 'Telefono') state.config.phone = r[1];
-                    if(r[0] === 'Color') state.config.color = r[1];
-                });
-                document.title = state.config.name;
-                document.getElementById('brand-name').innerText = state.config.name;
-            }});
-        }
+        function processData(csv) {
+            Papa.parse(csv, { 
+                header: true, 
+                skipEmptyLines: true, 
+                complete: (res) => {
+                    const data = res.data;
+                    if(data.length === 0) return;
 
-        function parseCategories(csv) {
-            Papa.parse(csv, { header: true, skipEmptyLines: true, complete: (res) => {
-                state.categories = res.data.map(r => r.Nombre).filter(n => n);
-                if(state.categories.length) state.activeCategory = state.categories[0];
-            }});
-        }
+                    // 1. Extraer Configuración (Solo de la primera fila)
+                    const firstRow = data[0];
+                    if(firstRow) {
+                        state.config.name = firstRow['Tienda_Nombre'] || "Mi Tienda";
+                        state.config.desc = firstRow['Tienda_Descripcion'] || "";
+                        state.config.phone = firstRow['Tienda_Telefono'] || "";
+                        state.config.prefix = firstRow['Tienda_Prefijo'] || "52";
+                        state.config.currency = firstRow['Tienda_Moneda'] || "MXN";
+                        state.config.color = firstRow['Tienda_Color_1'] || "#f97316";
 
-        function parseProducts(csv) {
-            Papa.parse(csv, { header: true, skipEmptyLines: true, complete: (res) => {
-                state.products = res.data.map(r => {
-                    // Limpieza de precio para evitar errores con comas en el Excel
-                    const cleanPrice = (str) => parseFloat(str?.replace(/,/g, '').replace('$','')) || 0;
+                        document.title = state.config.name;
+                        document.getElementById('brand-name').innerText = state.config.name;
+                        document.getElementById('store-desc').innerText = state.config.desc;
+                    }
 
-                    // Parse Extras: "Queso:10, Bacon:15"
-                    let extras = r.Extras ? r.Extras.split(',').map(e => {
-                        const [n, p] = e.split(':');
-                        return { name: n.trim(), price: cleanPrice(p) };
-                    }) : [];
+                    // 2. Procesar Productos y Categorías
+                    let cats = new Set();
+                    state.products = data.map(r => {
+                        if(!r['Prod_Nombre']) return null; // Ignorar filas vacías
 
-                    // Parse Variantes: "Grande:150, Pequeña:100"
-                    let variants = r.Variantes ? r.Variantes.split(',').map(v => {
-                        const [n, p] = v.split(':');
-                        return { name: n.trim(), price: cleanPrice(p) };
-                    }) : [];
+                        cats.add(r['Prod_Categoria']);
 
-                    // Parse Sin: "Cebolla, Tomate"
-                    let removals = r.Sin ? r.Sin.split(',').map(s => ({ name: s.trim() })) : [];
+                        const cleanPrice = (str) => parseFloat(str?.replace(/[^0-9.]/g, '')) || 0;
+                        const parseList = (str) => str ? str.split(',').map(s => s.trim()).filter(s => s) : [];
+                        
+                        // Variantes: "Nombre:Precio"
+                        const variants = parseList(r['Prod_Variantes']).map(v => {
+                            const [n, p] = v.split(':');
+                            return { name: n.trim(), price: cleanPrice(p) };
+                        });
 
-                    return {
-                        id: r.ID || Math.random().toString(),
-                        name: r.Nombre,
-                        desc: r.Descripcion,
-                        price: cleanPrice(r.Precio),
-                        category: r.Categoria,
-                        image: r.Imagen ? `images/${r.Imagen}` : null,
-                        extras, variants, removals
-                    };
-                });
-            }});
+                        // Extras: "Nombre:Precio"
+                        const extras = parseList(r['Prod_Extras']).map(e => {
+                            const [n, p] = e.split(':');
+                            return { name: n.trim(), price: cleanPrice(p) };
+                        });
+
+                        // Sin: "Ingrediente"
+                        const removals = parseList(r['Prod_Sin']).map(s => ({ name: s }));
+
+                        // Imagen
+                        let img = r['Prod_Imagen'];
+                        if (img && !img.startsWith('http')) {
+                            img = 'images/' + img;
+                        }
+
+                        return {
+                            id: Math.random().toString(36).substr(2, 9),
+                            name: r['Prod_Nombre'],
+                            desc: r['Prod_Descripcion'],
+                            price: cleanPrice(r['Prod_Precio']),
+                            category: r['Prod_Categoria'],
+                            image: img,
+                            variants,
+                            extras,
+                            removals
+                        };
+                    }).filter(p => p !== null);
+
+                    state.categories = Array.from(cats);
+                    if(state.categories.length) state.activeCategory = state.categories[0];
+                }
+            });
         }
 
         function applyStyles() { document.documentElement.style.setProperty('--primary', state.config.color); }
@@ -271,13 +293,13 @@
             const container = document.getElementById('product-container');
             const filtered = state.products.filter(p => p.category === state.activeCategory);
             container.innerHTML = filtered.length ? filtered.map(p => {
-                // Mostrar precio "Desde" si hay variantes
                 const displayPrice = p.variants.length > 0 ? Math.min(...p.variants.map(v=>v.price)) : p.price;
+                const imgUrl = p.image || 'https://via.placeholder.com/400x300?text=Sin+Imagen';
                 
                 return `
                 <div onclick="openProductModal('${p.id}')" class="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 hover:shadow-xl transition-all cursor-pointer group">
                     <div class="product-img-container">
-                        <img src="${p.image || 'https://via.placeholder.com/400x300?text=Sin+Imagen'}" class="group-hover:scale-105">
+                        <img src="${imgUrl}" class="group-hover:scale-105" onerror="this.src='https://via.placeholder.com/400x300?text=Sin+Imagen'">
                     </div>
                     <div class="p-5">
                         <div class="flex flex-col mb-2">
@@ -297,42 +319,43 @@
             if(!p) return;
             state.modalProduct = p;
             state.modalQty = 1;
-            // Si hay variantes, seleccionar la primera por defecto
             state.selectedVariant = p.variants.length > 0 ? p.variants[0] : null;
 
             document.getElementById('modal-title').innerText = p.name;
             document.getElementById('modal-desc').innerText = p.desc || '';
-            document.getElementById('modal-img').src = p.image || 'https://via.placeholder.com/400x300';
+            const imgEl = document.getElementById('modal-img');
+            imgEl.src = p.image || 'https://via.placeholder.com/400x300';
+            imgEl.onerror = function() { this.src = 'https://via.placeholder.com/400x300?text=Sin+Imagen'; };
             
-            // Render Variantes
             const varContainer = document.getElementById('modal-variants-container');
             if(p.variants.length) {
                 varContainer.classList.remove('hidden');
                 document.getElementById('modal-variants-list').innerHTML = p.variants.map((v, idx) => `
-                    <button onclick="selectVariant(${idx})" class="variant-btn p-2 border-2 rounded-xl text-xs font-bold text-center transition-all ${idx===0 ? 'border-primary bg-primary/10 text-primary' : 'border-slate-100 text-slate-500'}">
-                        ${v.name}<br>${formatPrice(v.price)}
+                    <button onclick="selectVariant(${idx})" class="variant-btn p-3 border-2 rounded-xl text-xs font-bold text-center transition-all ${idx===0 ? 'border-primary bg-primary/10 text-primary' : 'border-slate-100 text-slate-500 hover:border-slate-200'}">
+                        ${v.name}<br><span class="text-[10px] opacity-80">${formatPrice(v.price)}</span>
                     </button>
                 `).join('');
             } else { varContainer.classList.add('hidden'); }
 
-            // Render Extras
             const extraContainer = document.getElementById('modal-extras-container');
             if(p.extras.length) {
                 extraContainer.classList.remove('hidden');
                 document.getElementById('modal-extras-list').innerHTML = p.extras.map((e, idx) => `
-                    <label class="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer border border-transparent hover:border-primary/30">
-                        <div class="flex items-center gap-3"><input type="checkbox" class="extra-chk w-4 h-4 text-primary rounded" value="${idx}" onchange="updateModalPrice()"><span class="text-sm font-medium text-slate-700">${e.name}</span></div>
+                    <label class="flex items-center justify-between p-3 bg-slate-50 rounded-xl cursor-pointer border border-transparent hover:border-primary/30 transition-colors">
+                        <div class="flex items-center gap-3">
+                            <input type="checkbox" class="extra-chk w-4 h-4 text-primary rounded border-slate-300 focus:ring-primary" value="${idx}" onchange="updateModalPrice()">
+                            <span class="text-sm font-medium text-slate-700">${e.name}</span>
+                        </div>
                         <span class="text-xs font-bold text-primary">+${formatPrice(e.price)}</span>
                     </label>`).join('');
             } else { extraContainer.classList.add('hidden'); }
 
-            // Render Removals (Sin)
             const remContainer = document.getElementById('modal-removals-container');
             if(p.removals.length) {
                 remContainer.classList.remove('hidden');
                 document.getElementById('modal-removals-list').innerHTML = p.removals.map((r, idx) => `
-                    <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer border border-transparent hover:border-red-200">
-                        <input type="checkbox" class="rem-chk w-4 h-4 text-red-500 rounded" value="${idx}">
+                    <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl cursor-pointer border border-transparent hover:border-red-200 transition-colors">
+                        <input type="checkbox" class="rem-chk w-4 h-4 text-red-500 rounded border-slate-300 focus:ring-red-500" value="${idx}">
                         <span class="text-sm font-medium text-slate-700">Sin ${r.name}</span>
                     </label>`).join('');
             } else { remContainer.classList.add('hidden'); }
@@ -345,8 +368,8 @@
         function selectVariant(idx) {
             state.selectedVariant = state.modalProduct.variants[idx];
             document.querySelectorAll('.variant-btn').forEach((btn, i) => {
-                if(i === idx) { btn.className = "variant-btn p-2 border-2 rounded-xl text-xs font-bold text-center transition-all border-primary bg-primary/10 text-primary"; }
-                else { btn.className = "variant-btn p-2 border-2 rounded-xl text-xs font-bold text-center transition-all border-slate-100 text-slate-500"; }
+                if(i === idx) { btn.className = "variant-btn p-3 border-2 rounded-xl text-xs font-bold text-center transition-all border-primary bg-primary/10 text-primary"; }
+                else { btn.className = "variant-btn p-3 border-2 rounded-xl text-xs font-bold text-center transition-all border-slate-100 text-slate-500 hover:border-slate-200"; }
             });
             updateModalPrice();
         }
@@ -396,7 +419,7 @@
         function renderCartList() {
             const list = document.getElementById('cart-list');
             let total = 0;
-            if(!state.cart.length) { list.innerHTML = `<div class="text-center py-10 text-slate-400 italic">Carrito vacío</div>`; }
+            if(!state.cart.length) { list.innerHTML = `<div class="text-center py-10 text-slate-400 italic">Tu carrito está vacío.</div>`; }
             else {
                 list.innerHTML = state.cart.map(item => {
                     const subtotal = item.unitPrice * item.qty;
@@ -408,12 +431,12 @@
                                 <span class="font-bold text-slate-900">${item.qty}x</span>
                                 <span class="font-bold text-slate-800">${item.name}</span>
                             </div>
-                            ${item.variantName ? `<p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide bg-slate-100 inline-block px-1 rounded">${item.variantName}</p>` : ''}
-                            ${item.extras.length ? `<p class="text-xs text-blue-500 mt-1">+ ${item.extras.map(e=>e.name).join(', ')}</p>` : ''}
-                            ${item.removals.length ? `<p class="text-xs text-red-400 mt-0.5">Sin: ${item.removals.map(r=>r.name).join(', ')}</p>` : ''}
+                            ${item.variantName ? `<p class="text-[10px] font-bold text-slate-500 uppercase tracking-wide bg-slate-100 inline-block px-1 rounded mt-1">${item.variantName}</p>` : ''}
+                            ${item.extras.length ? `<p class="text-xs text-blue-500 mt-1">➕ ${item.extras.map(e=>e.name).join(', ')}</p>` : ''}
+                            ${item.removals.length ? `<p class="text-xs text-red-400 mt-0.5">🚫 Sin: ${item.removals.map(r=>r.name).join(', ')}</p>` : ''}
                             <p class="text-sm font-bold text-primary mt-1">${formatPrice(subtotal)}</p>
                         </div>
-                        <button onclick="state.cart = state.cart.filter(i => i.cartId !== ${item.cartId}); updateCartCounter();" class="text-slate-300 hover:text-red-500 p-2">✕</button>
+                        <button onclick="state.cart = state.cart.filter(i => i.cartId !== ${item.cartId}); updateCartCounter();" class="text-slate-300 hover:text-red-500 p-2 text-xl font-bold">×</button>
                     </div>`;
                 }).join('');
             }
@@ -428,24 +451,25 @@
 
         function setDelivery(t) {
             state.deliveryType = t;
-            document.getElementById('btn-delivery').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='delivery' ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200 text-slate-400'}`;
-            document.getElementById('btn-pickup').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='pickup' ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200 text-slate-400'}`;
+            document.getElementById('btn-delivery').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='delivery' ? 'bg-primary border-primary text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`;
+            document.getElementById('btn-pickup').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='pickup' ? 'bg-primary border-primary text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`;
             document.getElementById('order-address').style.display = t === 'pickup' ? 'none' : 'block';
         }
 
         function setPayment(t) {
             state.paymentMethod = t;
-            document.getElementById('btn-pay-cash').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='cash' ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200 text-slate-400'}`;
-            document.getElementById('btn-pay-card').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='card' ? 'bg-primary border-primary text-white' : 'bg-white border-slate-200 text-slate-400'}`;
+            document.getElementById('btn-pay-cash').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='cash' ? 'bg-primary border-primary text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`;
+            document.getElementById('btn-pay-card').className = `py-3 border-2 rounded-2xl font-bold text-sm transition-all ${t==='card' ? 'bg-primary border-primary text-white shadow-md' : 'bg-white border-slate-200 text-slate-400'}`;
         }
 
         function checkout() {
-            if(!state.cart.length) return alert("Carrito vacío");
+            if(!state.cart.length) return alert("Tu carrito está vacío.");
             const name = document.getElementById('order-name').value.trim();
             const address = document.getElementById('order-address').value.trim();
             const notes = document.getElementById('order-notes').value.trim();
-            if(!name) return alert("Falta tu nombre");
-            if(state.deliveryType === 'delivery' && !address) return alert("Falta la dirección");
+            
+            if(!name) return alert("Por favor escribe tu nombre.");
+            if(state.deliveryType === 'delivery' && !address) return alert("Por favor escribe tu dirección.");
 
             let msg = `👋 *PEDIDO DE ${name.toUpperCase()}*\n================\n`;
             msg += `🛵 *Tipo:* ${state.deliveryType==='delivery'?'Domicilio':'Recogida'}\n`;
@@ -460,9 +484,9 @@
             msg += `\n💰 *TOTAL: ${document.getElementById('cart-total').innerText}*\n`;
             if(notes) msg += `📝 *Nota:* ${notes}`;
 
-            window.open(`https://wa.me/${state.config.phone.replace(/\+/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
+            const phone = state.config.prefix + state.config.phone;
+            window.open(`https://wa.me/${phone.replace(/\+/g,'')}?text=${encodeURIComponent(msg)}`, '_blank');
         }
     </script>
 </body>
 </html>
-
