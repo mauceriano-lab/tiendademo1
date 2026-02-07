@@ -1,5 +1,5 @@
 Tienda_Nombre,Tienda_Descripcion,Tienda_Telefono,Tienda_Prefijo,Tienda_Moneda,Tienda_Color_1,Tienda_Color_2,Tienda_Color_Acento,Prod_Categoria,Prod_Nombre,Prod_Descripcion,Prod_Precio,Prod_Variantes,Prod_Imagen,Prod_Extras,Prod_Sin
-TacoFiesta Mexicana,Auténtico sabor mexicano,15500000000,52,MXN,#ea580c,#1e293b,#ea580c,Tacos,Tacos al Pastor,Orden de 5 tacos con piña y cilantro,85.00,,taco1.jpg,"Queso:15, Aguacate:20","Cebolla, Cilantro, Piña"
+TacoFiesta Mexicana,Auténtico sabor mexicano,123456,52,MXN,#ea580c,#1e293b,#ea580c,Tacos,Tacos al Pastor,Orden de 5 tacos con piña y cilantro,85.00,,taco1.jpg,"Queso:15, Aguacate:20","Cebolla, Cilantro, Piña"
 ,,,,,,,,Tacos,Tacos de Bistec,Tortilla hecha a mano,95.00,,taco2.jpg,"Queso:15, Nopales:10","Cebolla, Salsa"
 ,,,,,,,,Tacos,Gringa de Pastor,En tortilla de harina gigante con queso,70.00,,taco3.jpg,Extra Carne:25,"Piña, Salsa"
 ,,,,,,,,Tacos,Volcán de Chorizo,Tostada crujiente con queso fundido,50.00,,taco4.jpg,,Salsa
@@ -28,4 +28,5 @@ TacoFiesta Mexicana,Auténtico sabor mexicano,15500000000,52,MXN,#ea580c,#1e293b
 ,,,,,,,,Postres,Churros,Orden de 3 con azúcar y canela,45.00,,dessert3.jpg,"Cajeta:15, Chocolate:15",Azúcar
 ,,,,,,,,Postres,Helado Vainilla,Dos bolas gourmet,40.00,,dessert4.jpg,Chocolate Líquido:10,
 ,,,,,,,,Postres,Arroz con Leche,Con pasas y canela espolvoreada,35.00,,dessert5.jpg,,Pasas
+
 ,,,,,,,,Postres,Pay de Limón,Base de galleta maría,50.00,,dessert6.jpg,,Merengue
